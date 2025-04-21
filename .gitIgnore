@@ -1,0 +1,6 @@
+/backend/.env
+/backend/productiondb
+/backend/productiondb/app.flexible.yaml
+/frontend/.env
+/db-docker
+/db-docker/docker-compose.yml
