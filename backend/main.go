@@ -3,11 +3,18 @@ package main
 import (
 	
 	"BAZ/Nutritracker/routes"
-
+	"BAZ/Nutritracker/initializers"
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 
 )
+
+
+func init() {
+	initializers.LoadEnvVariables()
+	initializers.ConnectDB()
+	initializers.SyncDatabase()
+}
 
 func main() {
 	router := gin.Default()
