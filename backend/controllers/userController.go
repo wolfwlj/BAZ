@@ -10,7 +10,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-func UserLogin() {
+func UserLogin(c *gin.Context) {
 	var username string
 	fmt.Scan(&username)
 	var password string
@@ -27,6 +27,10 @@ func UserLogin() {
 	} else {
 		fmt.Println("User does not exist")
 	}
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Login successful",
+		"user":    "login test",
+	})
 }
 
 func bindRequest(c *gin.Context, body interface{}) error {
