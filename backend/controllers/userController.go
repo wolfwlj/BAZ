@@ -1,47 +1,80 @@
 package controllers
 
 import (
+	"BAZ/Nutritracker/helpers"
 	"BAZ/Nutritracker/initializers"
 	"BAZ/Nutritracker/models"
-	"fmt"
+	"errors"
 	"net/http"
+	"os"
+	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v4"
 	"golang.org/x/crypto/bcrypt"
 )
 
 func UserLogin(c *gin.Context) {
-	var username string
-	fmt.Scan(&username)
-	var password string
-	fmt.Scan(&password)
+	var body struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
 
 	//check if user exists in database
-	if checkUserExists(username) {
-		//check if password is correct
-		if checkPasswordHash(password, username) {
-			fmt.Println("Login successful")
-		} else {
-			fmt.Println("Invalid password")
-		}
-	} else {
-		fmt.Println("User does not exist")
+	user, err := checkUserExists(body.Email)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user not found",
+		})
+		return
 	}
+	//check if password is correct
+	err = bcrypt.CompareHashAndPassword([]byte(user.Password), []byte(body.Password))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "verkeerd wachtwoord of gebruikersnaam",
+		})
+		return
+	}
+
+	//jwt token
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"sub": user.ID,
+		"exp": time.Now().Add(time.Hour * 24 * 30 * 12).Unix(),
+	})
+
+	// Sign and get the complete encoded token as a string using the secret
+	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
+
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Failed to sign token",
+		})
+		return
+	}
+
+	//Send a response with the user data
+	c.SetSameSite(http.SameSiteNoneMode)
+
+	//secure flag moet true staan voor production, false zodat je het kan testen in postman
+	c.SetCookie("usertoken", tokenString, 36002430, "", "", false, true)
+
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
-		"user":    "login test",
+		"user":    user,
+		"token":   tokenString,
 	})
 }
 
-func bindRequest(c *gin.Context, body interface{}) error {
-	if err := c.Bind(body); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "failed to bind request body",
-		})
-		return err
-	}
-	return nil
-}
+// func bindRequest(c *gin.Context, body interface{}) error {
+// 	if err := c.Bind(body); err != nil {
+// 		c.JSON(http.StatusBadRequest, gin.H{
+// 			"error": "failed to bind request body",
+// 		})
+// 		return err
+// 	}
+// 	return nil
+// }
 
 func UpdateUser(c *gin.Context) {
 	var body struct {
@@ -53,7 +86,7 @@ func UpdateUser(c *gin.Context) {
 		PhoneNumber string `json:"phone_number"`
 	}
 
-	if err := bindRequest(c, &body); err != nil {
+	if err := helpers.BindRequest(c, &body); err != nil {
 		return
 	}
 
@@ -104,7 +137,7 @@ func DeleteUser(c *gin.Context) {
 		Email string `json:"email"`
 	}
 
-	if err := bindRequest(c, &body); err != nil {
+	if err := helpers.BindRequest(c, &body); err != nil {
 		return
 	}
 
@@ -155,17 +188,24 @@ func UserRegister(c *gin.Context) {
 		PhoneNumber string
 	}
 
-	if err := bindRequest(c, &body); err != nil {
+	if err := helpers.BindRequest(c, &body); err != nil {
 		return
 	}
+	user, err := checkUserExists(body.Email)
 
-	if checkUserExists(body.Email) {
+	if err == nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "user already exists",
 		})
 		return
 	}
 
+	if user.Email != "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user already exists",
+		})
+		return
+	}
 	hashedPassword, err := hashPassword(body.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -174,7 +214,7 @@ func UserRegister(c *gin.Context) {
 		return
 	}
 
-	user := models.User{
+	user = models.User{
 		Username:    body.Username,
 		Email:       body.Email,
 		Password:    hashedPassword,
@@ -215,22 +255,12 @@ func hashPassword(password string) (string, error) {
 	}
 	return (string(hashedPassword)), nil
 }
-func checkUserExists(email string) bool {
+func checkUserExists(email string) (models.User, error) {
 	//check if user exists in database
 	var user models.User
 	result := initializers.DB.Where("email = ?", email).First(&user)
 	if result.Error != nil {
-		return false
+		return models.User{}, errors.New("user not found")
 	}
-	return true
-}
-
-func checkPasswordHash(password, username string) bool {
-	//check if password is correct
-	unhashedPassword := "password" //get password from database
-	err := bcrypt.CompareHashAndPassword([]byte(unhashedPassword), []byte(password))
-	if err != nil {
-		return false
-	}
-	return true
+	return user, nil
 }

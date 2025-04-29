@@ -21,7 +21,6 @@ func Routes(router *gin.RouterGroup) {
 	router.DELETE("/delete", controllers.DeleteUser)
 	router.GET("/get/:email", controllers.GetUser)
 
-
 	// nutrilog routes
 	router.POST("/createnutrilog", controllers.CreateNutrilog)
 	router.GET("/getnutrilog/:id", controllers.GetNutrilogById)
