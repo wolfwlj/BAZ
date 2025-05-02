@@ -1,0 +1,5 @@
+idea: missichien een soort huisdier of of plantje voor streaks type shii
+
+feedback: 
+    beginnen met frontend 
+
