@@ -5,6 +5,7 @@ import (
 	"BAZ/Nutritracker/initializers"
 	"BAZ/Nutritracker/models"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -18,6 +19,10 @@ func UserLogin(c *gin.Context) {
 	var body struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+	}
+
+	if err := helpers.BindRequest(c, &body); err != nil {
+		return
 	}
 
 	//check if user exists in database
@@ -65,16 +70,6 @@ func UserLogin(c *gin.Context) {
 		"token":   tokenString,
 	})
 }
-
-// func bindRequest(c *gin.Context, body interface{}) error {
-// 	if err := c.Bind(body); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"error": "failed to bind request body",
-// 		})
-// 		return err
-// 	}
-// 	return nil
-// }
 
 func UpdateUser(c *gin.Context) {
 	var body struct {
@@ -183,8 +178,8 @@ func UserRegister(c *gin.Context) {
 		Username    string
 		Email       string
 		Password    string
-		FirstName   string `gorm:"type:text"`
-		LastName    string `gorm:"type:text"`
+		FirstName   string
+		LastName    string
 		PhoneNumber string
 	}
 
@@ -259,6 +254,10 @@ func checkUserExists(email string) (models.User, error) {
 	//check if user exists in database
 	var user models.User
 	result := initializers.DB.Where("email = ?", email).First(&user)
+
+	fmt.Println("result", result)
+	fmt.Println("user", user)
+
 	if result.Error != nil {
 		return models.User{}, errors.New("user not found")
 	}
