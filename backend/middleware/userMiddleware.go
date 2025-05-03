@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -15,15 +14,26 @@ import (
 
 func RequireAuth(c *gin.Context) {
 	// Get the token from the request header
-	tokenString := c.Request.Header.Get("Authorization")
-	if tokenString == "" {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Authorization header is missing"})
-		c.Abort()
+	tokenString := ""
+	temptoken1, err := c.Cookie("usertoken")
+	temptoken2 := c.Request.Header.Get("Authorization")
+
+	if err != nil && temptoken2 == "" {
+		if err == http.ErrNoCookie {
+
+			c.AbortWithStatus(400)
+			return
+		}
+		c.AbortWithStatus(http.StatusForbidden)
+
 		return
 	}
 
-	// Remove "Bearer " prefix from the token string
-	tokenString = strings.TrimPrefix(tokenString, "Bearer ")
+	if temptoken1 != "" {
+		tokenString = temptoken1
+	} else if temptoken2 != "" {
+		tokenString = temptoken2
+	}
 
 	// Parse the token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {

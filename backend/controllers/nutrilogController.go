@@ -3,6 +3,7 @@ package controllers
 import (
 	"BAZ/Nutritracker/initializers"
 	"BAZ/Nutritracker/models"
+	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
@@ -16,7 +17,7 @@ func CreateNutrilog(c *gin.Context) {
 		Carbohydrates   int    `json:"carbohydrates"`
 		MealType        string `json:"meal_type"`
 		MealTime        string `json:"meal_time"`
-		MealDate        string `json:"meal_date"` 
+		MealDate        string `json:"meal_date"`
 		MealDescription string `json:"meal_description"`
 		UserID          uint   `json:"user_id"`
 	}
@@ -43,8 +44,8 @@ func CreateNutrilog(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{
-		"message": "Nutrilog created",
-		"nutrilog":  nutrilog,
+		"message":  "Nutrilog created",
+		"nutrilog": nutrilog,
 	})
 }
 
@@ -67,10 +68,17 @@ func GetNutrilogById(c *gin.Context) {
 }
 
 func GetNutrilogs(c *gin.Context) {
-	
+
 	var nutrilogs []models.Nutrilog
 
-	initializers.DB.Find(&nutrilogs)
+	result := initializers.DB.Find(&nutrilogs)
+
+	if result.Error != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "user not found",
+		})
+		return
+	}
 
 	c.JSON(200, gin.H{
 		"nutrilogs": nutrilogs,
