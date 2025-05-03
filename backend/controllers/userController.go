@@ -20,6 +20,10 @@ func UserLogin(c *gin.Context) {
 		Password string `json:"password"`
 	}
 
+	if err := helpers.BindRequest(c, &body); err != nil {
+		return
+	}
+
 	//check if user exists in database
 	user, err := checkUserExists(body.Email)
 	if err != nil {
@@ -65,16 +69,6 @@ func UserLogin(c *gin.Context) {
 		"token":   tokenString,
 	})
 }
-
-// func bindRequest(c *gin.Context, body interface{}) error {
-// 	if err := c.Bind(body); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"error": "failed to bind request body",
-// 		})
-// 		return err
-// 	}
-// 	return nil
-// }
 
 func UpdateUser(c *gin.Context) {
 	var body struct {

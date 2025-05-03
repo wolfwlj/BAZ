@@ -1,9 +1,13 @@
 package middleware
 
 import (
+	"BAZ/Nutritracker/initializers"
+	"BAZ/Nutritracker/models"
+	"fmt"
 	"net/http"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v4"
@@ -30,12 +34,29 @@ func RequireAuth(c *gin.Context) {
 		return []byte(os.Getenv("SECRET")), nil
 	})
 
-	if err != nil || !token.Valid {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid or expired token"})
-		c.Abort()
-		return
-	}
+	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
+		//check if exp
+		if float64(time.Now().Unix()) > claims["exp"].(float64) {
+			c.AbortWithStatus(http.StatusUnauthorized)
+			return
+		}
+		//find user
+		var user models.User
+		// initializers.DB.First(&user, claims["sub"])
+		initializers.DB.First(&user, claims["sub"])
 
-	// Token is valid, proceed to the next handler
-	c.Next()
+		if user.ID == 0 {
+			c.AbortWithStatus(http.StatusUnauthorized)
+		}
+
+		//attach to req
+		c.Set("user", user)
+
+		//move on
+		c.Next()
+	} else {
+		fmt.Println(err)
+
+		c.AbortWithStatus(http.StatusUnauthorized)
+	}
 }
