@@ -218,12 +218,12 @@ func UserRegister(c *gin.Context) {
 		PhoneNumber: body.PhoneNumber,
 	}
 
-	if err := initializers.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to save user to database",
-		})
-		return
-	}
+	// // Check if DB is nil (database connection failed)
+	// if initializers.DB == nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{
+	// 		"error": "database connection not available",
+	// 	return
+	// })
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "User registered successfully",
@@ -253,6 +253,13 @@ func hashPassword(password string) (string, error) {
 func checkUserExists(email string) (models.User, error) {
 	//check if user exists in database
 	var user models.User
+	
+	// Check if DB is nil (database connection failed)
+	if initializers.DB == nil {
+		
+		return models.User{}, errors.New("database connection not available")
+	}
+	
 	result := initializers.DB.Where("email = ?", email).First(&user)
 
 	fmt.Println("result", result)

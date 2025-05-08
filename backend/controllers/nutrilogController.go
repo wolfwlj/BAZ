@@ -24,6 +24,14 @@ func CreateNutrilog(c *gin.Context) {
 
 	c.Bind(&body)
 
+	// Check if DB is nil (database connection failed)
+	if initializers.DB == nil {
+		c.JSON(500, gin.H{
+			"error": "database connection not available",
+		})
+		return
+	}
+
 	nutrilog := models.Nutrilog{
 		Calories:        body.Calories,
 		Proteins:        body.Proteins,
@@ -53,6 +61,14 @@ func GetNutrilogById(c *gin.Context) {
 
 	id := c.Param("id")
 
+	// Check if DB is nil (database connection failed)
+	if initializers.DB == nil {
+		c.JSON(500, gin.H{
+			"error": "database connection not available",
+		})
+		return
+	}
+
 	var nutrilog models.Nutrilog
 
 	result := initializers.DB.First(&nutrilog, id)
@@ -68,6 +84,14 @@ func GetNutrilogById(c *gin.Context) {
 }
 
 func GetNutrilogs(c *gin.Context) {
+
+	// Check if DB is nil (database connection failed)
+	if initializers.DB == nil {
+		c.JSON(500, gin.H{
+			"error": "database connection not available",
+		})
+		return
+	}
 
 	var nutrilogs []models.Nutrilog
 
@@ -104,6 +128,14 @@ func UpdateNutrilogById(c *gin.Context) {
 
 	c.Bind(&body)
 
+	// Check if DB is nil (database connection failed)
+	if initializers.DB == nil {
+		c.JSON(500, gin.H{
+			"error": "database connection not available",
+		})
+		return
+	}
+
 	result := initializers.DB.Model(&models.Nutrilog{}).Where("id = ?", id).Updates(models.Nutrilog{
 		Calories:        body.Calories,
 		Proteins:        body.Proteins,
@@ -130,6 +162,14 @@ func UpdateNutrilogById(c *gin.Context) {
 func DeleteNutrilogById(c *gin.Context) {
 
 	id := c.Param("id")
+
+	// Check if DB is nil (database connection failed)
+	if initializers.DB == nil {
+		c.JSON(500, gin.H{
+			"error": "database connection not available",
+		})
+		return
+	}
 
 	result := initializers.DB.Delete(&models.Nutrilog{}, id)
 
