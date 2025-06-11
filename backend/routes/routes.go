@@ -2,7 +2,6 @@ package routes
 
 import (
 	controllers "BAZ/Nutritracker/controllers"
-	middleware "BAZ/Nutritracker/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -23,9 +22,9 @@ func Routes(router *gin.RouterGroup) {
 	router.GET("/get/:email", controllers.GetUser)
 
 	// nutrilog routes
-	router.POST("/createnutrilog", middleware.RequireAuth, controllers.CreateNutrilog)
-	router.GET("/getnutrilog/:id", middleware.RequireAuth, controllers.GetNutrilogById)
-	router.GET("/getallnutrilogs", middleware.RequireAuth, controllers.GetNutrilogs)
-	router.PUT("/updatenutrilog/:id", middleware.RequireAuth, controllers.UpdateNutrilogById)
-	router.DELETE("/deletenutrilog/:id", middleware.RequireAuth, controllers.DeleteNutrilogById)
+	router.POST("/createnutrilog", controllers.CreateNutrilog)
+	router.GET("/getnutrilog/:id", controllers.GetNutrilogById)
+	router.GET("/getallnutrilogs", controllers.GetNutrilogs)
+	router.PUT("/updatenutrilog/:id", controllers.UpdateNutrilogById)
+	router.DELETE("/deletenutrilog/:id", controllers.DeleteNutrilogById)
 }

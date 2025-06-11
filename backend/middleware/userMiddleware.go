@@ -21,7 +21,9 @@ func RequireAuth(c *gin.Context) {
 	if err != nil && temptoken2 == "" {
 		if err == http.ErrNoCookie {
 
-			c.AbortWithStatus(400)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "No cookie found",
+			})
 			return
 		}
 		c.AbortWithStatus(http.StatusForbidden)
@@ -57,6 +59,7 @@ func RequireAuth(c *gin.Context) {
 
 		if user.ID == 0 {
 			c.AbortWithStatus(http.StatusUnauthorized)
+			return
 		}
 
 		//attach to req

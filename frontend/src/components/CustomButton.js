@@ -27,7 +27,12 @@ const CustomButton = ({
   return (
     <TouchableOpacity 
       style={buttonStyle} 
-      onPress={onPress} 
+      onPress={() => {
+        console.log('CustomButton pressed');
+        if (!disabled && !loading && typeof onPress === 'function') {
+          onPress();
+        }
+      }}
       disabled={disabled || loading}
       activeOpacity={0.7}
     >

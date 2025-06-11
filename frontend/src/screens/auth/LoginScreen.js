@@ -53,8 +53,9 @@ const LoginScreen = ({ navigation }) => {
   const handleLogin = async () => {
     if (validateForm()) {
       const result = await login(email, password);
-      if (!result.success) {
+      if (result.success) {
         // Error is handled by the AuthContext
+        
       }
     }
   };

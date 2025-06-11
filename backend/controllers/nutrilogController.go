@@ -22,7 +22,10 @@ func CreateNutrilog(c *gin.Context) {
 		UserID          uint   `json:"user_id"`
 	}
 
-	c.Bind(&body)
+	if err := c.Bind(&body); err != nil {
+		c.JSON(400, gin.H{"error": "Invalid request body", "details": err.Error()})
+		return
+	}
 
 	// Check if DB is nil (database connection failed)
 	if initializers.DB == nil {

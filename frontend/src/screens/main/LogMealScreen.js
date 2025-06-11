@@ -94,7 +94,12 @@ const LogMealScreen = ({ navigation }) => {
   };
   
   const handleLogMeal = async () => {
-    if (validateForm()) {
+    console.log('handeLogMeal called');
+    const { ID } = userInfo;
+    console.log('userInfo ID:', ID);
+    const valid = validateForm();
+    console.log('validateForm result:', valid);
+    if (valid) {
       setIsLoading(true);
       
       const now = new Date();
@@ -110,7 +115,7 @@ const LogMealScreen = ({ navigation }) => {
         meal_time: mealTime,
         meal_date: mealDate,
         meal_description: mealDescription,
-        user_id: userInfo.ID
+        user_id: ID
       };
       
       const response = await createNutrilog(nutrilogData);
@@ -118,16 +123,21 @@ const LogMealScreen = ({ navigation }) => {
       setIsLoading(false);
       
       if (response.success) {
-        Alert.alert(
-          'Success',
-          'Meal logged successfully!',
-          [
-            { 
-              text: 'OK', 
-              onPress: () => navigation.navigate('Home')
-            }
-          ]
-        );
+        if (Platform.OS === 'web') {
+          window.alert('Meal logged successfully!');
+          navigation.navigate('Home');
+        } else {
+          Alert.alert(
+        'Success',
+        'Meal logged successfully!',
+        [
+          { 
+            text: 'OK', 
+            onPress: () => navigation.navigate('Home')
+          }
+        ]
+          );
+        }
       } else {
         Alert.alert('Error', response.message || 'Failed to log meal. Please try again.');
       }
