@@ -6,7 +6,8 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Alert,
-  SafeAreaView
+  SafeAreaView,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
@@ -119,21 +120,35 @@ const ProfileScreen = () => {
   };
   
   const handleLogout = () => {
-    Alert.alert(
-      'Confirm Logout',
-      'Are you sure you want to log out?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Logout',
-          onPress: logout,
-          style: 'destructive'
-        }
-      ]
-    );
+    const confirmMessage = 'Are you sure you want to log out?';
+    
+    if (Platform.OS === 'web') {
+      if (window.confirm(confirmMessage)) {
+        console.log('Logout confirmed');
+        logout();
+      } else {
+        console.log('Logout cancelled');
+      }
+    } else {
+      Alert.alert(
+        'Confirm Logout',
+        confirmMessage,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Logout',
+            onPress: () => {
+              console.log('Logout confirmed');
+              logout();
+            },
+            style: 'destructive'
+          }
+        ]
+      );
+    }
   };
 
   return (
