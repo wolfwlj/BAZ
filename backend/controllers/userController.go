@@ -45,11 +45,11 @@ func UserLogin(c *gin.Context) {
 	//jwt token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.ID,
-		"exp": time.Now().Add(time.Hour * 24 * 30 * 12).Unix(),
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(), // 30 days expiration
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
+	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -58,15 +58,30 @@ func UserLogin(c *gin.Context) {
 		return
 	}
 
-	//Send a response with the user data
-	c.SetSameSite(http.SameSiteNoneMode)
+	// Set cookie with proper settings
+	c.SetCookie(
+		"usertoken",
+		tokenString,
+		3600*24*30, // 30 days
+		"/",
+		"",
+		true, // secure
+		true, // httpOnly
+	)
 
-	//secure flag moet true staan voor production, false zodat je het kan testen in postman
-	c.SetCookie("usertoken", tokenString, 36002430, "", "", false, true)
+	// Send response with user data (excluding sensitive info)
+	userResponse := gin.H{
+		"id":           user.ID,
+		"email":        user.Email,
+		"username":     user.Username,
+		"first_name":   user.FirstName,
+		"last_name":    user.LastName,
+		"phone_number": user.PhoneNumber,
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
-		"user":    user,
+		"user":    userResponse,
 		"token":   tokenString,
 	})
 }

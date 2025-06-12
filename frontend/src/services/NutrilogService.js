@@ -1,10 +1,45 @@
 import axios from 'axios';
+import { getApiUrl } from '../context/AuthContext';
+import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 
-const API_URL = 'http://localhost:8080/api/v1/user'; // For local development
+const API_URL = getApiUrl();
+
+// Create axios instance with the same configuration as AuthContext
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
+});
+
+// Add request interceptor to handle token
+api.interceptors.request.use(
+  async (config) => {
+    config.withCredentials = true;
+    let token;
+    if (Platform.OS === 'web') {
+      token = localStorage.getItem('userToken');
+    } else {
+      token = await SecureStore.getItemAsync('userToken');
+    }
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export const createNutrilog = async (nutrilogData) => {
   try {
-    const response = await axios.post(`${API_URL}/createnutrilog`, nutrilogData);
+    const response = await api.post('/createnutrilog', nutrilogData);
     return { success: true, data: response.data };
   } catch (error) {
     let message;
@@ -19,7 +54,7 @@ export const createNutrilog = async (nutrilogData) => {
 
 export const getNutrilogById = async (id) => {
   try {
-    const response = await axios.get(`${API_URL}/getnutrilog/${id}`);
+    const response = await api.get(`/getnutrilog/${id}`);
     return { success: true, data: response.data };
   } catch (error) {
     let message;
@@ -34,7 +69,7 @@ export const getNutrilogById = async (id) => {
 
 export const getAllNutrilogs = async () => {
   try {
-    const response = await axios.get(`${API_URL}/getallnutrilogs`);
+    const response = await api.get('/getallnutrilogs');
     return { success: true, data: response.data };
   } catch (error) {
     let message;
@@ -49,7 +84,7 @@ export const getAllNutrilogs = async () => {
 
 export const updateNutrilog = async (id, nutrilogData) => {
   try {
-    const response = await axios.put(`${API_URL}/updatenutrilog/${id}`, nutrilogData);
+    const response = await api.put(`/updatenutrilog/${id}`, nutrilogData);
     return { success: true, data: response.data };
   } catch (error) {
     let message;
@@ -64,7 +99,7 @@ export const updateNutrilog = async (id, nutrilogData) => {
 
 export const deleteNutrilog = async (id) => {
   try {
-    const response = await axios.delete(`${API_URL}/deletenutrilog/${id}`);
+    const response = await api.delete(`/deletenutrilog/${id}`);
     return { success: true, data: response.data };
   } catch (error) {
     let message;

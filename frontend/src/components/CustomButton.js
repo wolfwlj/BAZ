@@ -14,6 +14,7 @@ const CustomButton = ({
     styles.button,
     type === 'primary' ? styles.primaryButton : styles.secondaryButton,
     disabled && styles.disabledButton,
+    { minHeight: 44 },
     style
   ];
 
@@ -28,13 +29,15 @@ const CustomButton = ({
     <TouchableOpacity 
       style={buttonStyle} 
       onPress={() => {
-        console.log('CustomButton pressed');
+        console.log('CustomButton touch detected');
         if (!disabled && !loading && typeof onPress === 'function') {
+          console.log('CustomButton calling onPress handler');
           onPress();
         }
       }}
       disabled={disabled || loading}
       activeOpacity={0.7}
+      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
     >
       {loading ? (
         <ActivityIndicator 
@@ -56,6 +59,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 8,
+    minWidth: 100,
   },
   primaryButton: {
     backgroundColor: '#4CAF50',

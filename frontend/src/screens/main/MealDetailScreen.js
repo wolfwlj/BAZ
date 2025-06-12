@@ -6,7 +6,8 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Alert,
-  SafeAreaView
+  SafeAreaView,
+  Platform
 } from 'react-native';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { getNutrilogById, deleteNutrilog } from '../../services/NutrilogService';
@@ -42,26 +43,46 @@ const MealDetailScreen = ({ route, navigation }) => {
   };
   
   const handleDelete = () => {
-    Alert.alert(
-      'Confirm Delete',
-      'Are you sure you want to delete this meal log?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Delete',
-          onPress: confirmDelete,
-          style: 'destructive'
-        }
-      ]
-    );
+    console.log('handleDelete called');
+    const confirmMessage = 'Are you sure you want to delete this meal log?';
+    
+    if (Platform.OS === 'web') {
+      console.log('Using web confirm dialog');
+      if (window.confirm(confirmMessage)) {
+        console.log('Web confirm dialog confirmed');
+        confirmDelete();
+      } else {
+        console.log('Web confirm dialog cancelled');
+      }
+    } else {
+      console.log('Using native Alert dialog');
+      Alert.alert(
+        'Confirm Delete',
+        confirmMessage,
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('Delete cancelled')
+          },
+          {
+            text: 'Delete',
+            onPress: () => {
+              console.log('Delete confirmed, calling confirmDelete');
+              confirmDelete();
+            },
+            style: 'destructive'
+          }
+        ]
+      );
+    }
   };
   
   const confirmDelete = async () => {
+    console.log('confirmDelete called with mealId:', mealId);
     setIsLoading(true);
     const response = await deleteNutrilog(mealId);
+    console.log('deleteNutrilog response:', response);
     
     if (response.success) {
       Alert.alert('Success', 'Meal log deleted successfully');
@@ -171,13 +192,19 @@ const MealDetailScreen = ({ route, navigation }) => {
         <View style={styles.buttonContainer}>
           <CustomButton
             title="Edit Meal"
-            onPress={handleEdit}
+            onPress={() => {
+              console.log('Edit button pressed');
+              handleEdit();
+            }}
             style={{ flex: 1, marginRight: 8 }}
           />
           
           <CustomButton
             title="Delete"
-            onPress={handleDelete}
+            onPress={() => {
+              console.log('Delete button pressed');
+              handleDelete();
+            }}
             type="secondary"
             style={{ flex: 1, marginLeft: 8 }}
             textStyle={{ color: '#F44336' }}

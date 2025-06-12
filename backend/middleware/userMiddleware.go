@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,63 +14,79 @@ import (
 )
 
 func RequireAuth(c *gin.Context) {
-	// Get the token from the request header
+	// Get the token from the request header or cookie
 	tokenString := ""
-	temptoken1, err := c.Cookie("usertoken")
-	temptoken2 := c.Request.Header.Get("Authorization")
 
-	if err != nil && temptoken2 == "" {
-		if err == http.ErrNoCookie {
-
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"error": "No cookie found",
-			})
-			return
+	// Try to get token from Authorization header
+	authHeader := c.Request.Header.Get("Authorization")
+	if authHeader != "" {
+		// Extract token from "Bearer <token>"
+		parts := strings.Split(authHeader, " ")
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			tokenString = parts[1]
 		}
-		c.AbortWithStatus(http.StatusForbidden)
-
-		return
 	}
 
-	if temptoken1 != "" {
-		tokenString = temptoken1
-	} else if temptoken2 != "" {
-		tokenString = temptoken2
+	// If no token in header, try cookie
+	if tokenString == "" {
+		if cookie, err := c.Cookie("usertoken"); err == nil {
+			tokenString = cookie
+		}
+	}
+
+	if tokenString == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Authentication required",
+		})
+		c.Abort()
+		return
 	}
 
 	// Parse the token
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
-		// Check if the signing method is HMAC
+		// Validate signing method
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, jwt.NewValidationError("unexpected signing method", jwt.ValidationErrorSignatureInvalid)
+			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
-		return []byte(os.Getenv("SECRET")), nil
+		return []byte(os.Getenv("JWT_SECRET")), nil
 	})
 
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Invalid token",
+		})
+		c.Abort()
+		return
+	}
+
 	if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-		//check if exp
+		// Check if token is expired
 		if float64(time.Now().Unix()) > claims["exp"].(float64) {
-			c.AbortWithStatus(http.StatusUnauthorized)
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "Token expired",
+			})
+			c.Abort()
 			return
 		}
-		//find user
+
+		// Find user
 		var user models.User
-		// initializers.DB.First(&user, claims["sub"])
-		initializers.DB.First(&user, claims["sub"])
-
-		if user.ID == 0 {
-			c.AbortWithStatus(http.StatusUnauthorized)
+		if err := initializers.DB.First(&user, claims["sub"]).Error; err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"error": "User not found",
+			})
+			c.Abort()
 			return
 		}
 
-		//attach to req
+		// Attach user to context
 		c.Set("user", user)
-
-		//move on
 		c.Next()
 	} else {
-		fmt.Println(err)
-
-		c.AbortWithStatus(http.StatusUnauthorized)
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Invalid token claims",
+		})
+		c.Abort()
+		return
 	}
 }

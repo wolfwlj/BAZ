@@ -95,8 +95,8 @@ const LogMealScreen = ({ navigation }) => {
   
   const handleLogMeal = async () => {
     console.log('handeLogMeal called');
-    const { ID } = userInfo;
-    console.log('userInfo ID:', ID);
+    const { id } = userInfo;
+    console.log('userInfo id:', id);
     const valid = validateForm();
     console.log('validateForm result:', valid);
     if (valid) {
@@ -115,7 +115,7 @@ const LogMealScreen = ({ navigation }) => {
         meal_time: mealTime,
         meal_date: mealDate,
         meal_description: mealDescription,
-        user_id: ID
+        user_id: userInfo.id
       };
       
       const response = await createNutrilog(nutrilogData);

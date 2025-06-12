@@ -1,10 +1,99 @@
 import React, { createContext, useState, useEffect } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import { Platform } from 'react-native';
 import axios from 'axios';
+import Constants from 'expo-constants';
 
 export const AuthContext = createContext();
 
-const API_URL = 'http://localhost:8080/api/v1/user'; // For local development
+// Storage implementation that works on both web and native
+const storage = {
+  async getItem(key) {
+    if (Platform.OS === 'web') {
+      return localStorage.getItem(key);
+    }
+    return await SecureStore.getItemAsync(key);
+  },
+
+  async setItem(key, value) {
+    if (Platform.OS === 'web') {
+      localStorage.setItem(key, value);
+      return;
+    }
+    await SecureStore.setItemAsync(key, value);
+  },
+
+  async removeItem(key) {
+    if (Platform.OS === 'web') {
+      localStorage.removeItem(key);
+      return;
+    }
+    await SecureStore.deleteItemAsync(key);
+  }
+};
+
+// Get API URL based on environment
+export const getApiUrl = () => {
+  // For development on physical device
+  if (Constants.expoConfig?.extra?.apiUrl) {
+    return Constants.expoConfig.extra.apiUrl;
+  }
+  
+  // For development on emulator/web
+  if (__DEV__) {
+    // Use the exact same origin as the frontend
+    return 'http://localhost:8080/api/v1/user';
+  }
+  
+  // For production
+  return 'https://your-production-api.com/api/v1/user'; // Replace with your production API URL
+};
+
+const API_URL = getApiUrl();
+
+// Create axios instance with custom config
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+  // Ensure credentials are included in cross-origin requests
+  xsrfCookieName: 'XSRF-TOKEN',
+  xsrfHeaderName: 'X-XSRF-TOKEN',
+});
+
+// Add request interceptor to handle token and ensure credentials
+api.interceptors.request.use(
+  async (config) => {
+    // Ensure credentials are always included
+    config.withCredentials = true;
+    
+    const token = await storage.getItem('userToken');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor to handle token expiration
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    if (error.response?.status === 401) {
+      // Token expired or invalid
+      await storage.removeItem('userToken');
+      await storage.removeItem('userInfo');
+      // You might want to trigger a logout here
+    }
+    return Promise.reject(error);
+  }
+);
 
 export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
@@ -16,16 +105,20 @@ export const AuthProvider = ({ children }) => {
     // Check if user is logged in
     const bootstrapAsync = async () => {
       try {
-        const token = await SecureStore.getItemAsync('userToken');
-        const userInfo = await SecureStore.getItemAsync('userInfo');
+        const token = await storage.getItem('userToken');
+        const userInfo = await storage.getItem('userInfo');
         
         if (token && userInfo) {
           setUserToken(token);
           setUserInfo(JSON.parse(userInfo));
-          axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+          // Set the token in axios headers
+          api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
         }
       } catch (e) {
         console.log('Error restoring token', e);
+        // Clear any invalid tokens
+        await storage.removeItem('userToken');
+        await storage.removeItem('userInfo');
       } finally {
         setIsLoading(false);
       }
@@ -39,26 +132,32 @@ export const AuthProvider = ({ children }) => {
     setError('');
     
     try {
-      const response = await axios.post(`${API_URL}/login`, {
+      const response = await api.post('/login', {
         email,
         password
       });
       
       const { token, user } = response.data;
       
-      setUserToken(token);
-      setUserInfo(user);
-      
-      await SecureStore.setItemAsync('userToken', token);
-      await SecureStore.setItemAsync('userInfo', JSON.stringify(user));
-      
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-      
-      return { success: true };
+      if (token && user) {
+        setUserToken(token);
+        setUserInfo(user);
+        
+        // Store token and user info securely
+        await storage.setItem('userToken', token);
+        await storage.setItem('userInfo', JSON.stringify(user));
+        
+        // Set the token in axios headers
+        api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        
+        return { success: true };
+      } else {
+        throw new Error('Invalid response from server');
+      }
     } catch (error) {
       let message;
       if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
-        message = 'Cannot connect to the backend server. Please make sure the backend is running.';
+        message = 'Cannot connect to the server. Please check your internet connection.';
       } else {
         message = error.response?.data?.error || 'Login failed. Please try again.';
       }
@@ -74,12 +173,12 @@ export const AuthProvider = ({ children }) => {
     setError('');
     
     try {
-      const response = await axios.post(`${API_URL}/register`, userData);
+      const response = await api.post('/register', userData);
       return { success: true, data: response.data };
     } catch (error) {
       let message;
       if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
-        message = 'Cannot connect to the backend server. Please make sure the backend is running.';
+        message = 'Cannot connect to the server. Please check your internet connection.';
       } else {
         message = error.response?.data?.error || 'Registration failed. Please try again.';
       }
@@ -92,12 +191,22 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     setIsLoading(true);
-    setUserToken(null);
-    setUserInfo(null);
-    axios.defaults.headers.common['Authorization'] = '';
-    await SecureStore.deleteItemAsync('userToken');
-    await SecureStore.deleteItemAsync('userInfo');
-    setIsLoading(false);
+    try {
+      // Clear token from axios headers
+      delete api.defaults.headers.common['Authorization'];
+      
+      // Clear storage
+      await storage.removeItem('userToken');
+      await storage.removeItem('userInfo');
+      
+      // Clear state
+      setUserToken(null);
+      setUserInfo(null);
+    } catch (error) {
+      console.error('Error during logout:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const updateProfile = async (userData) => {
@@ -105,17 +214,17 @@ export const AuthProvider = ({ children }) => {
     setError('');
     
     try {
-      const response = await axios.put(`${API_URL}/update`, userData);
+      const response = await api.put('/update', userData);
       
       const updatedUser = response.data.user;
       setUserInfo(updatedUser);
-      await SecureStore.setItemAsync('userInfo', JSON.stringify(updatedUser));
+      await storage.setItem('userInfo', JSON.stringify(updatedUser));
       
       return { success: true, data: updatedUser };
     } catch (error) {
       let message;
       if (error.code === 'ECONNREFUSED' || error.message.includes('Network Error')) {
-        message = 'Cannot connect to the backend server. Please make sure the backend is running.';
+        message = 'Cannot connect to the server. Please check your internet connection.';
       } else {
         message = error.response?.data?.error || 'Update failed. Please try again.';
       }
