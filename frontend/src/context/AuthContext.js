@@ -18,6 +18,9 @@ export const AuthProvider = ({ children }) => {
       try {
         const token = await SecureStore.getItemAsync('userToken');
         const userInfo = await SecureStore.getItemAsync('userInfo');
+
+        console.log('🔑 Retrieved token:', token);
+        console.log('👤 Retrieved userInfo:', userInfo);
         
         if (token && userInfo) {
           setUserToken(token);
