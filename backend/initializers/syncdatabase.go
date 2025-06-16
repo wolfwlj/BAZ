@@ -12,6 +12,7 @@ func SyncDatabase() {
 		log.Println("Syncing database schema...")
 		DB.AutoMigrate(&models.User{})
 		DB.AutoMigrate(&models.Nutrilog{})
+		DB.AutoMigrate(&models.NutritionGoal{})
 	} else {
 		log.Println("Skipping database synchronization due to missing connection.")
 	}

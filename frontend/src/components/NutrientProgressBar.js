@@ -2,7 +2,7 @@ import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { calculateProgress } from '../utils/helpers';
 
-const NutrientProgressBar = ({ label, current, goal, unit = 'g', color = '#4CAF50' }) => {
+const NutrientProgressBar = ({ label, current, goal, unit = 'g', color = '#4CAF50', remaining = null }) => {
   const progress = calculateProgress(current, goal);
   
   return (
@@ -21,6 +21,11 @@ const NutrientProgressBar = ({ label, current, goal, unit = 'g', color = '#4CAF5
           ]} 
         />
       </View>
+      {remaining !== null && remaining > 0 && (
+        <Text style={styles.remainingText}>
+          Nog {remaining} {unit} nodig
+        </Text>
+      )}
     </View>
   );
 };
@@ -52,6 +57,12 @@ const styles = StyleSheet.create({
   progressBar: {
     height: '100%',
     borderRadius: 5,
+  },
+  remainingText: {
+    fontSize: 12,
+    color: '#FF9800',
+    marginTop: 4,
+    fontStyle: 'italic',
   },
 });
 
