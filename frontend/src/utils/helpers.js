@@ -1,3 +1,27 @@
+// Chart types
+export const CHART_TYPES = {
+  CALORIES: 'calories',
+  NUTRIENTS: 'nutrients',
+  MACROS: 'macros'
+};
+
+// Time periods for filtering data
+export const TIME_PERIODS = {
+  WEEK: 'week',
+  MONTH: 'month',
+  YEAR: 'year'
+};
+
+// Chart colors
+export const CHART_COLORS = {
+  primary: '#4CAF50',
+  secondary: '#2196F3',
+  tertiary: '#FFC107',
+  background: '#FFFFFF',
+  text: '#000000',
+  grid: '#E0E0E0'
+};
+
 // Format date to display in a user-friendly way
 export const formatDate = (dateString) => {
   const options = { year: 'numeric', month: 'long', day: 'numeric' };

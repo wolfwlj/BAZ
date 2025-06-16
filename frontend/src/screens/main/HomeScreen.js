@@ -61,6 +61,16 @@ const HomeScreen = ({ navigation }) => {
     setRefreshing(false);
   };
   
+  // Clear logs when user changes
+  useEffect(() => {
+    console.log('User changed, clearing logs');
+    setNutrilogs([]);
+    setTodayNutrilogs([]);
+    setStreak(0);
+    fetchNutrilogs();
+  }, [userInfo?.id]); // Only re-run when user ID changes
+  
+  // Initial fetch
   useEffect(() => {
     fetchNutrilogs();
   }, []);

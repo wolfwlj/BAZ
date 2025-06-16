@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { 
   View, 
   Text, 
@@ -6,53 +6,55 @@ import {
   ScrollView, 
   TouchableOpacity, 
   Dimensions,
-  SafeAreaView
+  SafeAreaView,
+  ActivityIndicator,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LineChart, BarChart, PieChart } from 'react-native-chart-kit';
 import { getAllNutrilogs } from '../../services/NutrilogService';
+import { AuthContext } from '../../context/AuthContext';
 import { 
-  calculateDailyCalories, 
-  calculateDailyNutrients, 
-  groupByDate, 
-  formatDate 
+  CHART_TYPES, 
+  TIME_PERIODS, 
+  CHART_COLORS,
+  formatDate,
+  calculateDailyCalories,
+  calculateDailyNutrients,
+  groupByDate
 } from '../../utils/helpers';
 
 const screenWidth = Dimensions.get('window').width;
 
-const CHART_TYPES = {
-  CALORIES: 'calories',
-  NUTRIENTS: 'nutrients',
-  MACROS: 'macros'
-};
-
-const TIME_PERIODS = {
-  WEEK: 'week',
-  MONTH: 'month',
-  YEAR: 'year'
-};
-
 const StatsScreen = () => {
+  const { userInfo } = useContext(AuthContext);
   const [nutrilogs, setNutrilogs] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeChart, setActiveChart] = useState(CHART_TYPES.CALORIES);
   const [timePeriod, setTimePeriod] = useState(TIME_PERIODS.WEEK);
-  
-  useEffect(() => {
-    fetchNutrilogs();
-  }, []);
   
   const fetchNutrilogs = async () => {
     setIsLoading(true);
     const response = await getAllNutrilogs();
     
     if (response.success) {
-      const logs = response.data.nutrilogs || [];
-      setNutrilogs(logs);
+      setNutrilogs(response.data.nutrilogs || []);
     }
     
     setIsLoading(false);
   };
+  
+  // Clear logs when user changes
+  useEffect(() => {
+    console.log('User changed in Stats, clearing logs');
+    setNutrilogs([]);
+    fetchNutrilogs();
+  }, [userInfo?.id]); // Only re-run when user ID changes
+  
+  // Initial fetch
+  useEffect(() => {
+    fetchNutrilogs();
+  }, []);
   
   const getFilteredLogs = () => {
     const now = new Date();

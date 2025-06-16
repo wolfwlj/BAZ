@@ -219,15 +219,6 @@ const LogMealScreen = ({ navigation }) => {
             error={fatsError}
           />
           
-          <CustomInput
-            label="Description (Optional)"
-            value={mealDescription}
-            onChangeText={setMealDescription}
-            placeholder="Enter meal description"
-            multiline
-            numberOfLines={3}
-          />
-          
           <TouchableOpacity 
             style={styles.scanButton}
             onPress={handleScanBarcode}

@@ -41,8 +41,13 @@ export const getApiUrl = () => {
   
   // For development on emulator/web
   if (__DEV__) {
-    // Use the exact same origin as the frontend
-    return 'http://localhost:8080/api/v1/user';
+    if (Platform.OS === 'web') {
+      // Use localhost for web development
+      return 'http://localhost:8080/api/v1/user';
+    } else {
+      // Use your computer's local IP address for mobile development
+      return 'http://192.168.0.117:8080/api/v1/user';
+    }
   }
   
   // For production

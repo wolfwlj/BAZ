@@ -2,6 +2,7 @@ package routes
 
 import (
 	controllers "BAZ/Nutritracker/controllers"
+	middleware "BAZ/Nutritracker/middleware"
 
 	"github.com/gin-gonic/gin"
 )
@@ -14,17 +15,24 @@ func Routes(router *gin.RouterGroup) {
 	// 	})
 	// })
 
-	// auth routes
+	// auth routes (no auth required)
 	router.POST("/login", controllers.UserLogin)
 	router.POST("/register", controllers.UserRegister)
-	router.PUT("/update", controllers.UpdateUser)
-	router.DELETE("/delete", controllers.DeleteUser)
-	router.GET("/get/:email", controllers.GetUser)
 
-	// nutrilog routes
-	router.POST("/createnutrilog", controllers.CreateNutrilog)
-	router.GET("/getnutrilog/:id", controllers.GetNutrilogById)
-	router.GET("/getallnutrilogs", controllers.GetNutrilogs)
-	router.PUT("/updatenutrilog/:id", controllers.UpdateNutrilogById)
-	router.DELETE("/deletenutrilog/:id", controllers.DeleteNutrilogById)
+	// protected routes (require auth)
+	auth := router.Group("/")
+	auth.Use(middleware.RequireAuth)
+	{
+		// user routes
+		auth.PUT("/update", controllers.UpdateUser)
+		auth.DELETE("/delete", controllers.DeleteUser)
+		auth.GET("/get/:email", controllers.GetUser)
+
+		// nutrilog routes
+		auth.POST("/createnutrilog", controllers.CreateNutrilog)
+		auth.GET("/getnutrilog/:id", controllers.GetNutrilogById)
+		auth.GET("/getallnutrilogs", controllers.GetNutrilogs)
+		auth.PUT("/updatenutrilog/:id", controllers.UpdateNutrilogById)
+		auth.DELETE("/deletenutrilog/:id", controllers.DeleteNutrilogById)
+	}
 }
