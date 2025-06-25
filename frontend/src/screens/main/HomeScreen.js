@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { AuthContext } from '../../context/AuthContext';
 import { getAllNutrilogs } from '../../services/NutrilogService';
+import { getActiveNutritionGoal, checkGoalProgress } from '../../services/NutritionGoalService';
 import { 
   calculateDailyCalories, 
   calculateDailyNutrients, 
@@ -35,26 +36,45 @@ const HomeScreen = ({ navigation }) => {
   const { userInfo } = useContext(AuthContext);
   const [nutrilogs, setNutrilogs] = useState([]);
   const [todayNutrilogs, setTodayNutrilogs] = useState([]);
+  const [nutritionGoal, setNutritionGoal] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [streak, setStreak] = useState(0);
   
-  const fetchNutrilogs = async () => {
-    setIsLoading(true);
-    const response = await getAllNutrilogs();
+  const fetchData = async () => {
+    if (!userInfo?.ID) return;
     
-    if (response.success) {
-      const logs = response.data.nutrilogs || [];
-      setNutrilogs(logs);
+    setIsLoading(true);
+    
+    try {
+      // Fetch nutrilogs
+      const response = await getAllNutrilogs();
       
-      // Get today's logs
-      const today = new Date().toISOString().split('T')[0];
-      const todayLogs = logs.filter(log => log.meal_date === today);
-      setTodayNutrilogs(todayLogs);
+      if (response.success) {
+        const logs = response.data.nutrilogs || [];
+        setNutrilogs(logs);
+        
+        // Get today's logs
+        const today = new Date().toISOString().split('T')[0];
+        const todayLogs = logs.filter(log => log.meal_date === today);
+        setTodayNutrilogs(todayLogs);
+        
+        // Calculate streak
+        const userStreak = calculateStreak(logs);
+        setStreak(userStreak);
+      }
       
-      // Calculate streak
-      const userStreak = calculateStreak(logs);
-      setStreak(userStreak);
+      // Fetch nutrition goal
+      const goalResponse = await getActiveNutritionGoal(userInfo.ID);
+      if (goalResponse.success) {
+        setNutritionGoal(goalResponse.data.nutrition_goal);
+      }
+      
+      // Check goal progress
+      await checkGoalProgress(userInfo.ID);
+      
+    } catch (error) {
+      console.error('Error fetching data:', error);
     }
     
     setIsLoading(false);
@@ -72,18 +92,29 @@ const HomeScreen = ({ navigation }) => {
   
   // Initial fetch
   useEffect(() => {
-    fetchNutrilogs();
-  }, []);
+    fetchData();
+  }, [userInfo?.ID]);
   
   const onRefresh = () => {
     setRefreshing(true);
-    fetchNutrilogs();
+    fetchData();
   };
   
   const dailyCalories = calculateDailyCalories(todayNutrilogs);
   const dailyNutrients = calculateDailyNutrients(todayNutrilogs);
   
-  const caloriesRemaining = DAILY_GOALS.calories - dailyCalories;
+  // Use personalized goals or fallback to defaults
+  const goals = nutritionGoal || {
+    calories_goal: DAILY_GOALS.calories,
+    proteins_goal: DAILY_GOALS.proteins,
+    carbs_goal: DAILY_GOALS.carbohydrates,
+    fats_goal: DAILY_GOALS.fats
+  };
+  
+  const caloriesRemaining = goals.calories_goal - dailyCalories;
+  const proteinsRemaining = goals.proteins_goal - dailyNutrients.proteins;
+  const fatsRemaining = goals.fats_goal - dailyNutrients.fats;
+  const carbsRemaining = goals.carbs_goal - dailyNutrients.carbohydrates;
   
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -129,30 +160,34 @@ const HomeScreen = ({ navigation }) => {
           <NutrientProgressBar 
             label="Calories" 
             current={dailyCalories} 
-            goal={DAILY_GOALS.calories} 
+            goal={goals.calories_goal} 
             unit="kcal"
             color="#FF9800"
+            remaining={Math.max(0, caloriesRemaining)}
           />
           
           <NutrientProgressBar 
             label="Protein" 
             current={dailyNutrients.proteins} 
-            goal={DAILY_GOALS.proteins} 
+            goal={goals.proteins_goal} 
             color="#4CAF50"
+            remaining={Math.max(0, proteinsRemaining)}
           />
           
           <NutrientProgressBar 
             label="Carbs" 
             current={dailyNutrients.carbohydrates} 
-            goal={DAILY_GOALS.carbohydrates} 
+            goal={goals.carbs_goal} 
             color="#2196F3"
+            remaining={Math.max(0, carbsRemaining)}
           />
           
           <NutrientProgressBar 
             label="Fat" 
             current={dailyNutrients.fats} 
-            goal={DAILY_GOALS.fats} 
+            goal={goals.fats_goal} 
             color="#F44336"
+            remaining={Math.max(0, fatsRemaining)}
           />
         </View>
         

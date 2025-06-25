@@ -34,5 +34,20 @@ func Routes(router *gin.RouterGroup) {
 		auth.GET("/getallnutrilogs", controllers.GetNutrilogs)
 		auth.PUT("/updatenutrilog/:id", controllers.UpdateNutrilogById)
 		auth.DELETE("/deletenutrilog/:id", controllers.DeleteNutrilogById)
+		auth.GET("/getnutrilogs/:user_id", controllers.GetNutrilogsByUserAndDate)
+
+		// nutrition goal routes
+		auth.POST("/createnutritiongoal", controllers.CreateNutritionGoal)
+		auth.GET("/getnutritiongoal/:user_id", controllers.GetActiveNutritionGoal)
+		auth.PUT("/updatenutritiongoal/:id", controllers.UpdateNutritionGoal)
+		auth.POST("/checkgoalprogress/:user_id", controllers.CheckAndUpdateGoalProgress)
+
+		// motivational message routes
+		auth.POST("/createmotivationalmessage", controllers.CreateMotivationalMessage)
+		auth.GET("/motivationalmessages/:user_id", controllers.GetMotivationalMessagesByUser)
+		auth.GET("/unreadmotivationalmessages/:user_id", controllers.GetUnreadMotivationalMessagesByUser)
+		auth.GET("/timedmotivationalmessages/:user_id", controllers.GetTimedMotivationalMessages)
+		auth.PUT("/markmessageasread/:id", controllers.MarkMessageAsRead)
+		auth.DELETE("/deletemotivationalmessage/:id", controllers.DeleteMotivationalMessage)
 	}
 }

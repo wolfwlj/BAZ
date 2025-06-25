@@ -17,6 +17,8 @@ import StatsScreen from '../screens/main/StatsScreen';
 import MealDetailScreen from '../screens/main/MealDetailScreen';
 import EditMealScreen from '../screens/main/EditMealScreen';
 import ScanBarcodeScreen from '../screens/main/ScanBarcodeScreen';
+import FoodDiaryScreen from '../screens/main/FoodDiaryScreen';
+import NutritionGoalSettingsScreen from '../screens/main/NutritionGoalSettingsScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -30,6 +32,8 @@ const MainTabNavigator = () => {
 
           if (route.name === 'Home') {
             iconName = focused ? 'home' : 'home-outline';
+          } else if (route.name === 'FoodDiary') {
+            iconName = focused ? 'book' : 'book-outline';
           } else if (route.name === 'LogMeal') {
             iconName = focused ? 'add-circle' : 'add-circle-outline';
           } else if (route.name === 'Stats') {
@@ -46,6 +50,11 @@ const MainTabNavigator = () => {
       })}
     >
       <Tab.Screen name="Home" component={HomeScreen} />
+      <Tab.Screen 
+        name="FoodDiary" 
+        component={FoodDiaryScreen} 
+        options={{ title: 'Eetdagboek' }}
+      />
       <Tab.Screen 
         name="LogMeal" 
         component={LogMealScreen} 
@@ -93,6 +102,11 @@ const AppNavigator = () => {
             name="ScanBarcode" 
             component={ScanBarcodeScreen} 
             options={{ title: 'Scan Barcode' }}
+          />
+          <Stack.Screen 
+            name="NutritionGoalSettings" 
+            component={NutritionGoalSettingsScreen} 
+            options={{ title: 'Voedingsdoelen' }}
           />
         </>
       ) : (
