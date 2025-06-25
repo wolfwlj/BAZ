@@ -5,6 +5,7 @@ import (
 	"BAZ/Nutritracker/initializers"
 	"BAZ/Nutritracker/models"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"time"
@@ -18,6 +19,10 @@ func UserLogin(c *gin.Context) {
 	var body struct {
 		Email    string `json:"email"`
 		Password string `json:"password"`
+	}
+
+	if err := helpers.BindRequest(c, &body); err != nil {
+		return
 	}
 
 	//check if user exists in database
@@ -40,11 +45,11 @@ func UserLogin(c *gin.Context) {
 	//jwt token
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"sub": user.ID,
-		"exp": time.Now().Add(time.Hour * 24 * 30 * 12).Unix(),
+		"exp": time.Now().Add(time.Hour * 24 * 30).Unix(), // 30 days expiration
 	})
 
 	// Sign and get the complete encoded token as a string using the secret
-	tokenString, err := token.SignedString([]byte(os.Getenv("SECRET")))
+	tokenString, err := token.SignedString([]byte(os.Getenv("JWT_SECRET")))
 
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -53,28 +58,33 @@ func UserLogin(c *gin.Context) {
 		return
 	}
 
-	//Send a response with the user data
-	c.SetSameSite(http.SameSiteNoneMode)
+	// Set cookie with proper settings
+	c.SetCookie(
+		"usertoken",
+		tokenString,
+		3600*24*30, // 30 days
+		"/",
+		"",
+		true, // secure
+		true, // httpOnly
+	)
 
-	//secure flag moet true staan voor production, false zodat je het kan testen in postman
-	c.SetCookie("usertoken", tokenString, 36002430, "", "", false, true)
+	// Send response with user data (excluding sensitive info)
+	userResponse := gin.H{
+		"id":           user.ID,
+		"email":        user.Email,
+		"username":     user.Username,
+		"first_name":   user.FirstName,
+		"last_name":    user.LastName,
+		"phone_number": user.PhoneNumber,
+	}
 
 	c.JSON(http.StatusOK, gin.H{
 		"message": "Login successful",
-		"user":    user,
+		"user":    userResponse,
 		"token":   tokenString,
 	})
 }
-
-// func bindRequest(c *gin.Context, body interface{}) error {
-// 	if err := c.Bind(body); err != nil {
-// 		c.JSON(http.StatusBadRequest, gin.H{
-// 			"error": "failed to bind request body",
-// 		})
-// 		return err
-// 	}
-// 	return nil
-// }
 
 func UpdateUser(c *gin.Context) {
 	var body struct {
@@ -180,12 +190,12 @@ func GetUser(c *gin.Context) {
 func UserRegister(c *gin.Context) {
 
 	var body struct {
-		Username    string
-		Email       string
-		Password    string
-		FirstName   string `gorm:"type:text"`
-		LastName    string `gorm:"type:text"`
-		PhoneNumber string
+		Username    string `json:"username"`
+		Email       string `json:"email"`
+		Password    string `json:"password"`
+		FirstName   string `json:"first_name"`
+		LastName    string `json:"last_name"`
+		PhoneNumber string `json:"phone_number"`
 	}
 
 	if err := helpers.BindRequest(c, &body); err != nil {
@@ -200,12 +210,6 @@ func UserRegister(c *gin.Context) {
 		return
 	}
 
-	if user.Email != "" {
-		c.JSON(http.StatusBadRequest, gin.H{
-			"error": "user already exists",
-		})
-		return
-	}
 	hashedPassword, err := hashPassword(body.Password)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
@@ -222,10 +226,9 @@ func UserRegister(c *gin.Context) {
 		LastName:    body.LastName,
 		PhoneNumber: body.PhoneNumber,
 	}
-
 	if err := initializers.DB.Create(&user).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "failed to save user to database",
+			"error": "failed to create user in database",
 		})
 		return
 	}
@@ -258,7 +261,18 @@ func hashPassword(password string) (string, error) {
 func checkUserExists(email string) (models.User, error) {
 	//check if user exists in database
 	var user models.User
+
+	// Check if DB is nil (database connection failed)
+	if initializers.DB == nil {
+
+		return models.User{}, errors.New("database connection not available")
+	}
+
 	result := initializers.DB.Where("email = ?", email).First(&user)
+
+	fmt.Println("result", result)
+	fmt.Println("user", user)
+
 	if result.Error != nil {
 		return models.User{}, errors.New("user not found")
 	}
